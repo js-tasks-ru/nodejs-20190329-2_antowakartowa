@@ -1,22 +1,37 @@
 const url = require('url');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
 const server = new http.Server();
 
 server.on('request', (req, res) => {
-  const pathname = url.parse(req.url).pathname.slice(1);
+  const pathItems = url.parse(req.url).pathname.split('/');
+  const filepath = path.join(__dirname, 'files', pathItems.slice(-1)[0]);
 
-  const filepath = path.join(__dirname, 'files', pathname);
+  let errorCode = req.method !== 'GET' && 500 || pathItems.length > 2 && 400 || false;
 
-  switch (req.method) {
-    case 'GET':
+  const resErrorMessages = {
+    400: 'Invalid Path',
+    404: 'File Not Found',
+    500: 'Not Implemented',
+  };
 
-      break;
+  const handleError = (code) => {
+    res.statusCode = code;
+    res.end(resErrorMessages[code]);
+  };
 
-    default:
-      res.statusCode = 501;
-      res.end('Not implemented');
+  if (errorCode) {
+    handleError(errorCode);
+  } else {
+    const fileStream = fs.createReadStream(filepath);
+    fileStream
+      .on('error', (error) => {
+        errorCode = error.code === 'ENOENT' ? 404 : 500;
+        handleError(errorCode);
+      })
+      .pipe(res);
   }
 });
 
