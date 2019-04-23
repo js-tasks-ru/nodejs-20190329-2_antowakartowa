@@ -21,19 +21,15 @@ router.get('/subscribe', async (ctx, next) => {
 router.post('/publish', async (ctx, next) => {
   const message = ctx.request.body.message;
 
-  if (!message) {
-    ctx.status = 204;
-    ctx.body = 'No message';
-    return;
+  if (message) {
+    let size = subscribers.length;
+    while (size--) {
+      subscribers.pop()(message);
+    }
   }
 
-  let size = subscribers.length;
-  while (size--) {
-    subscribers.pop()(message);
-  }
-
-  ctx.status = 200;
-  ctx.body = 'Success';
+  ctx.status = message ? 200 : 204;
+  ctx.body = message ? 'Success' : 'No message';
 });
 
 app.use(router.routes());
