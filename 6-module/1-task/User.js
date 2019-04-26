@@ -3,15 +3,20 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: 'Email is required',
-    unique: 'This Email already exists',
-    match: '/^[-.\w]+@([\w-]+\.)+[\w-]{2,12}$/',
+    required: true,
+    unique: true,
+    validate: [
+      {
+        validator: (value) => /^[-.\w]+@([\w-]+\.)+[\w-]{2,12}$/g.test(value),
+        message: () => 'Invalid email',
+      },
+    ],
     lowercase: true,
     trim: true,
   },
   displayName: {
     type: String,
-    required: 'Display name is required',
+    required: true,
     index: true,
     trim: true,
   },
