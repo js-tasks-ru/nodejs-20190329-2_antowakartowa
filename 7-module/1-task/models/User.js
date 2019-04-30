@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const config = require('config');
 const crypto = require('crypto');
 const connection = require('../libs/connection');
 
@@ -34,9 +35,11 @@ const userSchema = new mongoose.Schema({
 function generatePassword(salt, password) {
   return new Promise((resolve, reject) => {
     crypto.pbkdf2(
-      password, salt,
-      10, 128,
-      'sha512',
+      password,
+      salt,
+      config.get('password.iterations'),
+      config.get('password.keyLength'),
+      config.get('password.digest'),
       (err, key) => {
         if (err) return reject(err);
         resolve(key.toString('hex'));
@@ -46,13 +49,13 @@ function generatePassword(salt, password) {
 }
 
 userSchema.methods.setPassword = async function setPassword(password) {
-  this.salt = crypto.randomBytes(10).toString('hex');
+  this.salt = crypto.randomBytes(config.get('password.saltLength')).toString('hex');
   this.passwordHash = await generatePassword(this.salt, password);
 };
 
 userSchema.methods.checkPassword = async function(password) {
   if (!password) return false;
-  
+
   const hash = await generatePassword(this.salt, password);
   return hash === this.passwordHash;
 };
