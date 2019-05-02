@@ -3,7 +3,8 @@ module.exports = {
     uri: 'mongodb://localhost/chat_app_test',
   },
   password: {
-    iterations: 10,
-    keyLength: 64,
+    iterations: 1,
+    keyLength: 32,
+    saltLength: 4,
   },
 };
