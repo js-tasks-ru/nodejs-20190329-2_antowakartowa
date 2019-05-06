@@ -3,7 +3,9 @@ const path = require('path');
 const Koa = require('koa');
 const uuid = require('uuid/v4');
 const Router = require('koa-router');
-const config = require('config');
+// const config = require('config');
+const config = require('/config/default');
+const get = require('lodash/get');
 const passport = require('./libs/passport');
 const handleMongooseValidationError = require('./libs/validationErrors');
 
@@ -32,45 +34,46 @@ const router = new Router({ prefix: '/api' });
 router.post('/login', async (ctx, next) => {
   await passport.authenticate('local', async (err, user, info) => {
     if (err) throw err;
-    
+
     if (!user) {
       ctx.status = 400;
       ctx.body = { error: info };
       return;
     }
-  
+
     const token = uuid();
-    
+
     ctx.body = { token };
   })(ctx, next);
 });
 
 router.get('/oauth/:provider', async (ctx, next) => {
   const provider = ctx.params.provider;
-  
+
   await passport.authenticate(
     provider,
-    config.get(`providers.${provider}.options`),
+    get(config, `providers.${provider}.options`),
+    // config.get(`providers.${provider}.options`),
   )(ctx, next);
-  
+
   ctx.status = 200;
   ctx.body = { status: 'ok', location: ctx.response.get('location') };
 });
 
 router.post('/oauth_callback', handleMongooseValidationError, async (ctx, next) => {
   const provider = ctx.request.body.provider;
-  
+
   await passport.authenticate(provider, async (err, user, info) => {
     if (err) throw err;
-    
+
     if (!user) {
       ctx.status = 400;
       ctx.body = { error: info };
       return;
     }
-    
+
     const token = uuid();
-    
+
     ctx.body = { token };
   })(ctx, next);
 });
