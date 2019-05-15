@@ -99,7 +99,7 @@ router.post('/register', async (ctx, next) => {
     to: ctx.request.body.email,
     subject: 'Подтверждение email',
     locals: {
-      verificationToken
+      token: verificationToken
     }
   });
 
