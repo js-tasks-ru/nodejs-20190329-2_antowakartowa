@@ -29,7 +29,7 @@ module.exports = {
     },
   },
   mailer: {
-    user: '',
-    password: '',
+    user: 'gintonyk@gmail.com',
+    password: 'nsnsnpqggvywwmle',
   },
 };
