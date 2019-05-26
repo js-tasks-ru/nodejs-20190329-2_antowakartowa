@@ -40,10 +40,10 @@ app.use(async (ctx, next) => {
 app.use((ctx, next) => {
   ctx.login = async function login(user) {
     const token = uuid();
-    Session.create({
+    await Session.create({
       token,
       lastVisit: new Date(),
-      user: user._id,
+      user: user,
     });
 
     return token;
@@ -52,36 +52,27 @@ app.use((ctx, next) => {
   return next();
 });
 
-app.use(async (ctx, next) => {
-  const token = (ctx.request.headers.authorization || '').split(' ')[1];
-
-  if (token) {
-    let session;
-    try {
-      session = await Session.findOne({ token }).populate('user');
-    } catch (error) {
-      handleError(error);
-    }
-
-    if (session) {
-      session.set('lastVisit', new Date());
-      session.markModified('lastVisit');
-      session.save();
-
-      ctx.user = session.user;
-    } else {
-      ctx.throw(401, 'Неверный аутентификационный токен');
-    }
-  }
-
-  return next();
-})
-
 const router = new Router({prefix: '/api'});
 
 router.use(async (ctx, next) => {
-  const header = ctx.request.get('Authorization');
-  if (!header) return next();
+  const token = (ctx.request.get('Authorization') || '').split(' ')[1];
+  if (!token) return next();
+
+  let session;
+  try {
+    session = await Session.findOne({ token }).populate('user');
+  } catch (error) {
+    handleError(error);
+  }
+
+  if (!session) {
+    ctx.throw(401, 'Неверный аутентификационный токен');
+  }
+
+  session.set('lastVisit', new Date());
+  session.save();
+
+  ctx.user = session.user;
 
   return next();
 });
