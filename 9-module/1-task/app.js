@@ -9,7 +9,17 @@ const mustBeAuthenticated = require('./libs/mustBeAuthenticated');
 
 const app = new Koa();
 
-app.use(require('koa-static')('public'));
+const handleError = (error, ctx) => {
+  const {errors} = error;
+  ctx.status = 400;
+  ctx.body = {
+    errors: errors
+      ? Object.keys(errors).reduce((errObj, key) => ({...errObj, [key]: errors[key].message}), {})
+      : error.message,
+  };
+};
+
+app.use(require('koa-static')(path.join(__dirname, 'public')));
 app.use(require('koa-bodyparser')());
 
 app.use(async (ctx, next) => {
@@ -30,12 +40,42 @@ app.use(async (ctx, next) => {
 app.use((ctx, next) => {
   ctx.login = async function login(user) {
     const token = uuid();
+    Session.create({
+      token,
+      lastVisit: new Date(),
+      user: user._id,
+    });
 
     return token;
   };
-  
+
   return next();
 });
+
+app.use(async (ctx, next) => {
+  const token = (ctx.request.headers.authorization || '').split(' ')[1];
+
+  if (token) {
+    let session;
+    try {
+      session = await Session.findOne({ token }).populate('user');
+    } catch (error) {
+      handleError(error);
+    }
+
+    if (session) {
+      session.set('lastVisit', new Date());
+      session.markModified('lastVisit');
+      session.save();
+
+      ctx.user = session.user;
+    } else {
+      ctx.throw(401, 'Неверный аутентификационный токен');
+    }
+  }
+
+  return next();
+})
 
 const router = new Router({prefix: '/api'});
 
@@ -52,7 +92,7 @@ router.post('/oauth_callback', handleMongooseValidationError, require('./control
 router.post('/register', handleMongooseValidationError, require('./controllers/register'));
 router.post('/confirm', require('./controllers/confirm'));
 
-router.get('/me', require('./controllers/me'));
+router.get('/me', mustBeAuthenticated, require('./controllers/me'));
 
 app.use(router.routes());
 
